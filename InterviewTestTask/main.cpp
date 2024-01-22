@@ -11,7 +11,7 @@
 #include <QTextStream>
 #include <QValueAxis>
 
-
+// QT_CHARTS_USE_NAMESPACE
 
 class MeasurementPlot : public QMainWindow {
 public:
