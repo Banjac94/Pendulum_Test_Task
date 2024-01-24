@@ -82,5 +82,6 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
   MeasurementPlot mainWindow;
   mainWindow.show();
+  mainWindow.resize(420, 300);
   return app.exec();
 }
