@@ -15,73 +15,93 @@
 
 class MeasurementPlot : public QMainWindow {
 public:
-  MeasurementPlot() { setupUI(); }
+    MeasurementPlot() { setupUI(); }
 
 private:
-  void setupUI() {
-    QChart *chart = new QChart;
-    chart->setTitle("Measurement Data");
-    QDateTimeAxis *axisX = new QDateTimeAxis;
-    QValueAxis *axisY = new QValueAxis;
-    axisX->setTitleText("Timestamp");
-    axisY->setTitleText("Value");
-    chart->addAxis(axisX, Qt::AlignBottom);
-    chart->addAxis(axisY, Qt::AlignLeft);
+    void setupUI() {
+        QChart *chart = new QChart;
+        chart->setTitle("Measurement Data");
+        QDateTimeAxis *axisX = new QDateTimeAxis;
+        QValueAxis *axisY = new QValueAxis;
+        axisX->setTitleText("Timestamp");
+        axisX->setFormat("yyyy-MM-dd hh:mm:ss");
+        axisY->setTitleText("Value");
 
-    QString fileName = QInputDialog::getText(this, "Entering a file name","Enter a file name:");
+        chart->addAxis(axisX, Qt::AlignBottom);
+        chart->addAxis(axisY, Qt::AlignLeft);
+        
+        chart->legend()->setVisible(false);
 
-    // HERE YOU NEED TO PUT PATH TO SAMPLE FILES, BECAUSE THIS IS PATH TO SAMPLE FILES ON MY PC.
-    QString filePath = "C:/Users/banja/OneDrive/Desktop/TeskTaskEnglish/SampleFiles/" + fileName;
+       
+        QString folderPath = QFileDialog::getExistingDirectory(
+            this, "Select Folder Containing SampleFiles", QDir::homePath());
 
-    loadMeasurementData(filePath, chart);
+        if (folderPath.isEmpty()) {
+            QMessageBox::critical(this, "Error", "Folder path not selected.");
+            return;
+        }
 
-    QChartView *chartView = new QChartView(chart);
-    setCentralWidget(chartView);
-  }
+        QString fileName = QInputDialog::getText(this, "Enter File Name",
+                                                 "Enter the name of the file you want to load:");
 
-  void loadMeasurementData(const QString &filePath, QChart *chart) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-      QMessageBox::critical(this, "Error", "Could not open the file.");
-      return;
+        if (fileName.isEmpty()) {
+            QMessageBox::critical(this, "Error", "File name not entered.");
+            return;
+        }
+
+        QString filePath = folderPath + "/" + fileName;
+
+        loadMeasurementData(filePath, chart);
+
+        QChartView *chartView = new QChartView(chart);
+        setCentralWidget(chartView);
     }
 
-    QTextStream in(&file);
-    QLineSeries *series = new QLineSeries;
+    void loadMeasurementData(const QString &filePath, QChart *chart) {
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QMessageBox::critical(this, "Error", "Could not open the file: " + filePath);
+            return;
+        }
 
-    while (!in.atEnd()) {
-      QString line = in.readLine();
-      if (line.startsWith("#")) {
-      } else {
-          break;
-      }
+        QTextStream in(&file);
+        QLineSeries *series = new QLineSeries;
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            if (line.startsWith("#")) {
+            } else {
+                break;
+            }
+        }
+
+        while (!in.atEnd()) {
+            QStringList data = in.readLine().split(" ");
+            if (data.size() == 2) {
+                double timestamp = data[0].toDouble();
+                double value = data[1].toDouble();
+                qDebug() << "Timestamp:" << timestamp << "Value:" << value;
+                series->append(timestamp, value);
+            } else {
+                QMessageBox::critical(this, "Error",
+                                      "Invalid data format in the file.");
+                delete series;
+                return;
+            }
+        }
+
+        chart->addSeries(series);
+        series->attachAxis(chart->axisX());
+        series->attachAxis(chart->axisY());
+
+        file.close();
     }
-
-    while (!in.atEnd()) {
-      QStringList data = in.readLine().split(" ");
-      if (data.size() == 2) {
-        double timestamp = data[0].toDouble();
-        double value = data[1].toDouble();
-        series->append(timestamp, value);
-      } else {
-        QMessageBox::critical(this, "Error",
-                              "Invalid data format in the file.");
-        return;
-      }
-    }
-
-    chart->addSeries(series);
-    series->attachAxis(chart->axisX());
-    series->attachAxis(chart->axisY());
-
-    file.close();
-  }
 };
 
 int main(int argc, char *argv[]) {
-  QApplication app(argc, argv);
-  MeasurementPlot mainWindow;
-  mainWindow.show();
-  mainWindow.resize(420, 300);
-  return app.exec();
+    QApplication app(argc, argv);
+    MeasurementPlot mainWindow;
+    mainWindow.resize(800, 600);
+    mainWindow.show();
+    return app.exec();
 }
